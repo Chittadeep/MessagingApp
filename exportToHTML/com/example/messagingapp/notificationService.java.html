@@ -1,0 +1,135 @@
+<html>
+<head>
+<title>notificationService.java</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #000080; font-weight: bold;}
+.s1 { color: #000000;}
+.s2 { color: #008000; font-weight: bold;}
+.s3 { color: #0000ff;}
+.s4 { color: #808080; font-style: italic;}
+</style>
+</head>
+<body bgcolor="#ffffff">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#c0c0c0" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+notificationService.java</font>
+</center></td></tr></table>
+<pre><span class="s0">package </span>com.example.messagingapp;
+
+<span class="s0">import </span>android.app.NotificationChannel;
+<span class="s0">import </span>android.app.NotificationManager;
+<span class="s0">import </span>android.app.PendingIntent;
+<span class="s0">import </span>android.app.Service;
+<span class="s0">import </span>android.content.Intent;
+<span class="s0">import </span>android.os.Build;
+<span class="s0">import </span>android.os.IBinder;
+<span class="s0">import </span>android.widget.Toast;
+
+<span class="s0">import </span>androidx.annotation.NonNull;
+<span class="s0">import </span>androidx.annotation.Nullable;
+<span class="s0">import </span>androidx.core.app.NotificationCompat;
+
+<span class="s0">import </span>com.google.firebase.database.DataSnapshot;
+<span class="s0">import </span>com.google.firebase.database.DatabaseError;
+<span class="s0">import </span>com.google.firebase.database.DatabaseReference;
+<span class="s0">import </span>com.google.firebase.database.FirebaseDatabase;
+<span class="s0">import </span>com.google.firebase.database.ValueEventListener;
+
+<span class="s0">import </span>java.util.Iterator;
+
+
+<span class="s0">public class </span>notificationService <span class="s0">extends </span>Service {
+    @Nullable
+    Member user;
+
+    <span class="s0">public </span>IBinder onBind(Intent intent) {
+        <span class="s0">return null</span>;
+    }
+
+    @Override
+    <span class="s0">public int </span>onStartCommand(<span class="s0">final </span>Intent intent, <span class="s0">int </span>flags, <span class="s0">int </span>startId) {
+         user = (Member) intent.getSerializableExtra(<span class="s2">&quot;User&quot;</span>);
+
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference myRef = database.getReference(<span class="s2">&quot;users/&quot; </span>+ user.getPhoneNum());
+        myRef.child(<span class="s2">&quot;inbox/&quot;</span>).addValueEventListener(<span class="s0">new </span>ValueEventListener() {
+            @Override
+            <span class="s0">public void </span>onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                Iterator&lt;DataSnapshot&gt; children = dataSnapshot.getChildren().iterator();
+
+                <span class="s0">int </span>count = <span class="s3">1</span>;
+
+                NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                String channelID = <span class="s2">&quot;Personal Notification&quot;</span>;
+
+                Intent landingIntent = <span class="s0">new </span>Intent(getBaseContext(), Dashboard.<span class="s0">class</span>);<span class="s4">//.putExtra(&quot;userService&quot;, user);</span>
+
+                PendingIntent landingPendingIntent = PendingIntent.getActivity(getApplicationContext(), <span class="s3">0</span>, landingIntent, PendingIntent.FLAG_ONE_SHOT);
+
+                <span class="s0">if </span>(Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.O) {
+
+                    NotificationChannel notificationChannel = <span class="s0">new </span>NotificationChannel(channelID, <span class="s2">&quot;personal notifications&quot;</span>, NotificationManager.IMPORTANCE_DEFAULT);
+
+                    notificationChannel.setDescription(<span class="s2">&quot;Include all personal notifications&quot;</span>);
+
+                    notificationManager.createNotificationChannel(notificationChannel);
+                }
+
+               <span class="s0">while </span>(children.hasNext()) {
+
+                   Message notification = children.next().getValue(Message.<span class="s0">class</span>);
+
+                String contentTitle;
+                    String contentText;
+                    <span class="s0">if </span>(count &gt; <span class="s3">1</span>) {
+                        contentTitle = <span class="s0">null</span>;
+                        contentText = count + <span class="s2">&quot; messages received&quot;</span>;
+                    } <span class="s0">else </span>{
+                        contentTitle = Long.toString(notification.getNum());
+                        contentText = notification.getMessage();
+                    }
+
+                    NotificationCompat.Builder mBuilder =
+                            <span class="s0">new </span>NotificationCompat.Builder(getApplicationContext(), channelID)
+                                    .setSmallIcon(R.drawable.notification_icon)
+                                    .setContentTitle(contentTitle)
+                                    .setContentText(contentText)
+                                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                                    .setAutoCancel(<span class="s0">true</span>)
+                                    .setContentIntent(landingPendingIntent);
+
+                    notificationManager.notify(<span class="s3">001</span>, mBuilder.build());
+
+                    count++;
+                }
+            }
+
+
+
+            @Override
+            <span class="s0">public void </span>onCancelled(@NonNull DatabaseError databaseError) {
+                Toast.makeText(getApplicationContext(), <span class="s2">&quot;Database connection failed&quot;</span>, Toast.LENGTH_LONG).show();
+
+            }
+        });
+
+        <span class="s0">return </span>START_REDELIVER_INTENT;
+    }
+
+    <span class="s0">public void </span>onTaskRemoved(Intent rootIntent) {
+        Intent restartServiceIntent = <span class="s0">new </span>Intent(getApplicationContext(),<span class="s0">this</span>.getClass());
+        restartServiceIntent.setPackage(getPackageName());
+        startService(restartServiceIntent);
+        <span class="s0">super</span>.onTaskRemoved(rootIntent);
+    }
+
+    <span class="s0">public void </span>onDestroy() {
+        Toast.makeText(getBaseContext(), <span class="s2">&quot;service destroyed&quot;</span>, Toast.LENGTH_LONG).show();
+        <span class="s0">super</span>.onDestroy();
+    }
+}
+</pre>
+</body>
+</html>
