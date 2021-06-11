@@ -33,3 +33,12 @@ Android Java whatsApp clone in progress
 
 ![WhatsApp Image 2020-05-07 at 9 02 58 AM](https://user-images.githubusercontent.com/37974051/121731159-2ffca800-cb0e-11eb-8c59-1f1c70e23871.jpeg)
 # Notification Service.
+
+
+This was the best condition of the project once upon a time specially in old android when Service were not stopped to save battery.
+
+Had I known about Git and Github that time I would not have let this App of mine destroy.
+
+It is not even now in a condition to start or even probably register and there is an error in serializing of data back from firebase to the client app(receiver account).
+
+I will try to get back my app in a stable position in future.
